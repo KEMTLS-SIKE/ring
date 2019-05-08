@@ -29,7 +29,7 @@ pub struct PQSignature {
 }
 
 pub struct PQSignatureScheme {
-    pub keypair: fn() -> (PQPublicKey, PQSecretKey) -> (PQPublicKey, PQSecretKey),
+    pub keypair: fn() -> (PQPublicKey, PQSecretKey),
 
     pub sign: fn(&[u8], &PQSecretKey) -> PQSignature,
 
