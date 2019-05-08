@@ -223,7 +223,10 @@ impl KeyPair {
 
             // Step 7 with encoding.
             return Ok(signature::Signature::new(|sig_bytes| {
-                (self.alg.format_rs)(scalar_ops, &r, &s, sig_bytes)
+                sig_bytes.resize_with(600, Default::default);
+                let len = (self.alg.format_rs)(scalar_ops, &r, &s, sig_bytes);
+                sig_bytes.truncate(len);
+                len
             }));
         }
 

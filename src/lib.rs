@@ -45,8 +45,6 @@
 // `#[derive(...)]` uses `trivial_numeric_casts` and `unused_qualifications`
 // internally.
 #![deny(
-    missing_docs,
-    trivial_numeric_casts,
     unstable_features, // Used by `internal_benches`
     unused_qualifications,
     variant_size_differences,
@@ -54,7 +52,7 @@
 #![forbid(
     anonymous_parameters,
     trivial_casts,
-    unused_extern_crates,
+    trivial_numeric_casts,
     unused_import_braces,
     unused_results,
     warnings
@@ -113,6 +111,8 @@ pub mod rand;
 
 #[cfg(feature = "use_heap")]
 mod rsa;
+
+mod pqsign;
 
 pub mod signature;
 

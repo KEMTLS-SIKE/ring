@@ -265,7 +265,7 @@
 //! # }
 //! ```
 
-use crate::{cpu, ec, error, sealed};
+use crate::{cpu, error, sealed};
 use core;
 use untrusted;
 
@@ -287,6 +287,11 @@ pub use crate::ec::{
             ECDSA_P384_SHA384_ASN1, ECDSA_P384_SHA384_FIXED,
         },
     },
+};
+
+pub use crate::pqsign::{
+    PQSignature, PQPublicKey, PQSecretKey, PQSignatureScheme,
+    SPHINCS_SHAKE_256_128F_SIMPLE,
 };
 
 #[cfg(feature = "use_heap")]
@@ -324,9 +329,9 @@ pub mod primitive {
 }
 
 /// A public key signature returned from a signing operation.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Signature {
-    value: [u8; MAX_LEN],
+    value: Vec<u8>,
     len: usize,
 }
 
@@ -334,10 +339,10 @@ impl Signature {
     // Panics if `value` is too long.
     pub(crate) fn new<F>(fill: F) -> Self
     where
-        F: FnOnce(&mut [u8; MAX_LEN]) -> usize,
+        F: FnOnce(&mut Vec<u8>) -> usize,
     {
-        let mut r = Signature {
-            value: [0; MAX_LEN],
+        let mut r = Self {
+            value: Vec::new(),
             len: 0,
         };
         r.len = fill(&mut r.value);
@@ -357,13 +362,6 @@ pub trait KeyPair: core::fmt::Debug + Send + Sized + Sync {
     /// The public key for the key pair.
     fn public_key(&self) -> &Self::PublicKey;
 }
-
-/// The longest signature is an ASN.1 P-384 signature where *r* and *s* are of
-/// maximum length with the leading high bit set on each. Then each component
-/// will have a tag, a one-byte length, and a one-byte “I'm not negative”
-/// prefix, and the outer sequence will have a two-byte length.
-pub(crate) const MAX_LEN: usize = 1/*tag:SEQUENCE*/ + 2/*len*/ +
-    (2 * (1/*tag:INTEGER*/ + 1/*len*/ + 1/*zero*/ + ec::SCALAR_MAX_BYTES));
 
 /// A signature verification algorithm.
 pub trait VerificationAlgorithm: core::fmt::Debug + Sync + sealed::Sealed {

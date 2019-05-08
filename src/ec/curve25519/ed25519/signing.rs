@@ -170,10 +170,10 @@ impl<'a> KeyPair {
 
     /// Returns the signature of the message `msg`.
     pub fn sign(&self, msg: &[u8]) -> signature::Signature {
-        signature::Signature::new(|signature_bytes| {
-            let (signature_bytes, _unused) = signature_bytes.into_();
+        signature::Signature::new(|signature_bytes_vec| {
+            let mut signature_bytes = [0u8; 64];
             // Borrow `signature_bytes`.
-            let (signature_r, signature_s) = signature_bytes.into_();
+            let (signature_r, signature_s) = (&mut signature_bytes).into_();
             let nonce = {
                 let mut ctx = digest::Context::new(&digest::SHA512);
                 ctx.update(&self.private_prefix);
@@ -192,6 +192,8 @@ impl<'a> KeyPair {
             unsafe {
                 GFp_x25519_sc_muladd(signature_s, &hram, &self.private_scalar, &nonce);
             }
+            signature_bytes_vec.clear();
+            signature_bytes_vec.extend_from_slice(&signature_bytes);
 
             SIGNATURE_LEN
         })
@@ -245,5 +247,3 @@ static PKCS8_TEMPLATE: pkcs8::Template = pkcs8::Template {
     curve_id_index: 0,
     private_key_index: 0x10,
 };
-
-impl_array_split!(u8, SIGNATURE_LEN, signature::MAX_LEN - SIGNATURE_LEN);
