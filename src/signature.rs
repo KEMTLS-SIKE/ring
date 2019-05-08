@@ -290,8 +290,7 @@ pub use crate::ec::{
 };
 
 pub use crate::pqsign::{
-    PQSignature, PQPublicKey, PQSecretKey, PQSignatureScheme,
-    SPHINCS_SHAKE_256_128F_SIMPLE,
+    PQPublicKey, PQSecretKey, PQSignature, PQSignatureScheme, SPHINCS_SHAKE_256_128F_SIMPLE,
 };
 
 #[cfg(feature = "use_heap")]

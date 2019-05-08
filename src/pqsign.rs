@@ -5,9 +5,8 @@
 //!     * Only RSA has PKCS1
 //! * Import signature schemes from pqcrypto
 
-
-pub use pqcrypto::traits::sign::{PublicKey, SecretKey, DetachedSignature};
 pub use pqcrypto::sign::sphincsshake256128fsimple;
+pub use pqcrypto::traits::sign::{DetachedSignature, PublicKey, SecretKey};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AlgorithmID {
@@ -21,7 +20,7 @@ pub struct PQPublicKey {
 
 pub struct PQSecretKey {
     algorithm: AlgorithmID,
-    key: Vec<u8>
+    key: Vec<u8>,
 }
 
 pub struct PQSignature {
@@ -30,21 +29,19 @@ pub struct PQSignature {
 }
 
 pub struct PQSignatureScheme {
-
-    pub keygen: fn() -> (PQPublicKey, PQSecretKey),
+    pub keypair: fn() -> (PQPublicKey, PQSecretKey) -> (PQPublicKey, PQSecretKey),
 
     pub sign: fn(&[u8], &PQSecretKey) -> PQSignature,
 
     pub algorithm: AlgorithmID,
 
     pub verify: for<'a, 'b, 'c> fn(&'a [u8], &'b PQSignature, &'c PQPublicKey) -> bool,
-
 }
 
 #[allow(unused)]
 pub static SPHINCS_SHAKE_256_128F_SIMPLE: PQSignatureScheme = PQSignatureScheme {
     algorithm: AlgorithmID::SPHINCS_SHAKE_256_128F_SIMPLE,
-    keygen: || {
+    keypair: || {
         let (pk, sk) = sphincsshake256128fsimple::keypair();
         let pqpk = PQPublicKey {
             algorithm: AlgorithmID::SPHINCS_SHAKE_256_128F_SIMPLE,
@@ -72,6 +69,23 @@ pub static SPHINCS_SHAKE_256_128F_SIMPLE: PQSignatureScheme = PQSignatureScheme 
         let sig = sphincsshake256128fsimple::DetachedSignature::from_bytes(&sig.signature);
         let pk = sphincsshake256128fsimple::PublicKey::from_bytes(&pk.key);
         sphincsshake256128fsimple::verify_detached_signature(&sig, message, &pk).is_ok()
-    }
+    },
 };
 
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_signatures() {
+        let scheme = &SPHINCS_SHAKE_256_128F_SIMPLE;
+
+        let mut message = [0u8; 64];
+        let (pk, sk) = (scheme.keypair)();
+        let sig = (scheme.sign)(&message, &sk);
+        assert!((scheme.verify)(&message, &sig, &pk));
+        message[10] = 1;
+        assert!(!(scheme.verify)(&message, &sig, &pk));
+    }
+}
