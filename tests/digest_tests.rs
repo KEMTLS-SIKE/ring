@@ -270,7 +270,6 @@ macro_rules! test_large_digest {
     };
 }
 
-/// XXX: This test is too slow on Android ARM.
 #[cfg(any(not(target_os = "android"), not(target_arch = "arm")))]
 test_large_digest!(
     digest_test_large_digest_sha1,

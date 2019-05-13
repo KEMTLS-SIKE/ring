@@ -171,7 +171,7 @@ impl<'a> KeyPair {
     /// Returns the signature of the message `msg`.
     pub fn sign(&self, msg: &[u8]) -> signature::Signature {
         signature::Signature::new(|signature_bytes_vec| {
-            let mut signature_bytes = [0u8; 64];
+            let mut signature_bytes = [0u8; SIGNATURE_LEN];
             // Borrow `signature_bytes`.
             let (signature_r, signature_s) = (&mut signature_bytes).into_();
             let nonce = {

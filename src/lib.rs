@@ -52,7 +52,6 @@
 #![forbid(
     anonymous_parameters,
     trivial_casts,
-    trivial_numeric_casts,
     unused_import_braces,
     unused_results,
     warnings
