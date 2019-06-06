@@ -8,7 +8,7 @@
 
 use pqcrypto::prelude::*;
 
-use crate::{error, io::der, pkcs8, sealed, signature};
+use crate::{error, pkcs8, sealed, signature};
 use untrusted;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -83,23 +83,14 @@ impl PQSecretKey {
     pub fn from_pkcs8(
         alg: &'static PQSignatureScheme, input: untrusted::Input,
     ) -> Result<Self, error::KeyRejected> {
-        let mut template = b"\x06\x0B\x2B\x06\x01\x04\x01\x82\x37\x59\x02".to_vec();
-        template.push((alg.id as u16 >> 2) as u8);
+        let mut template = b"\x06\x0B\x2A\x06\x01\x04\x01\x82\x37\x59\x02".to_vec();
+        template.push((alg.id as u16 >> 8) as u8);
         template.push(alg.id as u8);
-        let (input, _) = pkcs8::unwrap_key_(&template, pkcs8::Version::V1OrV2, input)?;
+        // push null
+        template.push(0x05);
+        template.push(0);
+        let (private_key, _) = pkcs8::unwrap_key_(&template, pkcs8::Version::V1OrV2, input)?;
 
-        let private_key = input.read_all(error::KeyRejected::invalid_encoding(), |input| {
-            der::nested(
-                input,
-                der::Tag::OctetString,
-                error::KeyRejected::invalid_encoding(),
-                |input| {
-                    let key = der::expect_tag_and_get_value(input, der::Tag::OctetString)
-                        .map_err(|_| error::KeyRejected::invalid_encoding())?;
-                    Ok(key)
-                },
-            )
-        })?;
 
         Ok(PQSecretKey {
             alg,
@@ -165,6 +156,14 @@ impl signature::VerificationAlgorithm for PQSignatureScheme {
             id: self.id,
             signature: signature.as_slice_less_safe().to_vec(),
         };
+
+        {
+            use std::io::prelude::*;
+            use std::fs::File;
+            let mut f = File::create("/tmp/msg.bin").unwrap();
+            f.write_all(msg.as_slice_less_safe()).unwrap();
+        }
+
         if let Ok(()) = (self.verify)(msg.as_slice_less_safe(), &sig, &pk) {
             Ok(())
         } else {
@@ -199,7 +198,7 @@ macro_rules! sphincs_scheme {
                 key: sk.to_vec(),
             },
             sign: |message: &[u8], sk: &PQSecretKey| {
-                debug_assert_eq!(sk.alg.id, AlgorithmID::SPHINCS_SHAKE_256_128F_SIMPLE);
+                debug_assert_eq!(sk.alg.id, AlgorithmID::$id);
                 let sk = $ns::SecretKey::from_bytes(&sk.key).unwrap();
                 let sig = $ns::detached_sign(message, &sk);
                 PQSignature {
