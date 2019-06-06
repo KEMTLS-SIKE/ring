@@ -1,10 +1,5 @@
 //! Wraps the post-quantum signature schemes in something slightly more usable
 //! for Ring.
-//!
-//! Todo:
-//! * Figure out desired API (probably steal from ECDSA/RSA)
-//!     * Only RSA has PKCS1
-//! * Import signature schemes from pqcrypto
 
 use pqcrypto::prelude::*;
 
@@ -50,8 +45,6 @@ pub enum AlgorithmID {
     SPHINCS_HARAKA_256F_SIMPLE = 0xFE22,
     SPHINCS_HARAKA_256F_ROBUST = 0xFE23,
 }
-
-// old stuff below
 
 #[derive(Clone)]
 pub struct PQPublicKey {
