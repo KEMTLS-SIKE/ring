@@ -300,6 +300,7 @@ name = "ring"
 [dependencies]
 untrusted = "0.6.2"
 libc = { version = "0.2.48", default_features = false }
+csidh-rust = { path = "../csidh-rust" }
 pqcrypto = { path = "../pqcrypto/pqcrypto" }
 
 [target.'cfg(not(target_os = "ios"))'.dependencies]

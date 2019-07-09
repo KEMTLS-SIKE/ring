@@ -72,6 +72,7 @@ use untrusted;
 pub use crate::ec::{
     curve25519::x25519::X25519,
     suite_b::ecdh::{ECDH_P256, ECDH_P384},
+    csidh::CSIDH,
 };
 
 /// A key agreement algorithm.

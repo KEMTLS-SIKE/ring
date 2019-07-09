@@ -36,6 +36,7 @@
 
 #![doc(html_root_url = "https://briansmith.org/rustdoc/")]
 #![allow(
+    bare_trait_objects,
     missing_copy_implementations,
     missing_debug_implementations,
     non_camel_case_types,

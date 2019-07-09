@@ -38,9 +38,11 @@ pub enum CurveID {
     Curve25519,
     P256,
     P384,
+    CSIDH,
 }
 
-const ELEM_MAX_BITS: usize = 384;
+// Patched for CSIDH
+const ELEM_MAX_BITS: usize = 592;
 pub const ELEM_MAX_BYTES: usize = (ELEM_MAX_BITS + 7) / 8;
 
 pub const SCALAR_MAX_BYTES: usize = ELEM_MAX_BYTES;
@@ -59,3 +61,4 @@ pub const PKCS8_DOCUMENT_MAX_LEN: usize = 40 + SCALAR_MAX_BYTES + keys::PUBLIC_K
 pub mod curve25519;
 mod keys;
 pub mod suite_b;
+pub mod csidh;
