@@ -66,79 +66,194 @@
 // The "NSA Guide" steps here are from from section 3.1, "Ephemeral Unified
 // Model."
 
-use crate::{cpu, ec, error, rand};
+use crate::{ec, error, rand};
 use untrusted;
 
 pub use crate::ec::{
+    csidh::CSIDH,
     curve25519::x25519::X25519,
     suite_b::ecdh::{ECDH_P256, ECDH_P384},
-    csidh::CSIDH,
 };
+
+pub use crate::kem;
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum AlgorithmIdentifier {
+    Curve(&'static ec::Curve),
+    Kem(kem::Algorithm),
+}
+
+pub(crate) enum PrivateKey {
+    ECPrivateKey(Box<ec::Seed>),
+    KemPrivateKey(Vec<u8>),
+}
 
 /// A key agreement algorithm.
 pub struct Algorithm {
-    pub(crate) curve: &'static ec::Curve,
-    pub(crate) ecdh: fn(
+    pub(crate) algorithm: AlgorithmIdentifier,
+    pub(crate) decapsulate: fn(
         out: &mut [u8],
-        private_key: &ec::Seed,
-        peer_public_key: untrusted::Input,
+        private_key: &PrivateKey,
+        ciphertext: untrusted::Input,
     ) -> Result<(), error::Unspecified>,
+    pub(crate) encapsulate: fn(
+        peer_public_key: untrusted::Input,
+        rng: &rand::SecureRandom,
+    ) -> Result<(Ciphertext, SharedSecret), error::Unspecified>,
+    pub(crate) keypair:
+        fn(rng: &rand::SecureRandom) -> Result<(PrivateKey, PublicKey), error::Unspecified>,
 }
 
-derive_debug_via_field!(Algorithm, curve);
+pub type SharedSecret = Vec<u8>;
+
+derive_debug_via_field!(Algorithm, algorithm);
 
 impl Eq for Algorithm {}
 impl PartialEq for Algorithm {
-    fn eq(&self, other: &Algorithm) -> bool { self.curve.id == other.curve.id }
+    fn eq(&self, other: &Algorithm) -> bool { self.algorithm == other.algorithm }
 }
 
 /// An ephemeral private key for use (only) with `agree_ephemeral`. The
 /// signature of `agree_ephemeral` ensures that an `EphemeralPrivateKey` can be
 /// used for at most one key agreement.
 pub struct EphemeralPrivateKey {
-    private_key: ec::Seed,
+    private_key: PrivateKey,
     alg: &'static Algorithm,
+    public_key: Option<PublicKey>,
 }
 
 impl<'a> EphemeralPrivateKey {
     /// Generate a new ephemeral private key for the given algorithm.
     pub fn generate(
-        alg: &'static Algorithm, rng: &rand::SecureRandom,
+        alg: &'static Algorithm,
+        rng: &rand::SecureRandom,
     ) -> Result<Self, error::Unspecified> {
-        let cpu_features = cpu::features();
-
-        // NSA Guide Step 1.
-        //
-        // This only handles the key generation part of step 1. The rest of
-        // step one is done by `compute_public_key()`.
-        let private_key = ec::Seed::generate(&alg.curve, rng, cpu_features)?;
-        Ok(Self { private_key, alg })
+        let (private_key, public_key) = (alg.keypair)(rng)?;
+        Ok(Self {
+            private_key,
+            alg,
+            public_key: Some(public_key),
+        })
     }
 
     /// Computes the public key from the private key.
     #[inline(always)]
     pub fn compute_public_key(&self) -> Result<PublicKey, error::Unspecified> {
-        // NSA Guide Step 1.
-        //
-        // Obviously, this only handles the part of Step 1 between the private
-        // key generation and the sending of the public key to the peer. `out`
-        // is what should be sent to the peer.
-        self.private_key.compute_public_key().map(PublicKey)
+        if let Some(ref public_key) = self.public_key {
+            Ok(public_key.clone())
+        } else if let PrivateKey::ECPrivateKey(private_key) = &self.private_key {
+            // NSA Guide Step 1.
+            //
+            // Obviously, this only handles the part of Step 1 between the private
+            // key generation and the sending of the public key to the peer. `out`
+            // is what should be sent to the peer.
+            private_key.compute_public_key().map(|k| PublicKey::ECPublicKey(Box::new(k)))
+        } else {
+            Err(error::Unspecified)
+        }
+    }
+
+    /// Encapsulate to public key
+    pub fn encapsulate<F, R, E>(
+        &self,
+        peer_public_key: untrusted::Input,
+        error_value: E,
+        kdf: F,
+    ) -> Result<(Ciphertext, R), E>
+    where
+        F: FnOnce(&[u8]) -> Result<R, E>,
+    {
+        if let AlgorithmIdentifier::Curve(curve) = self.alg.algorithm {
+            let pk = self.compute_public_key().unwrap();
+            // NSA Guide Prerequisite 1.
+            //
+            // The domain parameters are hard-coded. This check verifies that the
+            // peer's public key's domain parameters match the domain parameters of
+            // this private key.
+            let alg = &self.alg;
+
+            // NSA Guide Prerequisite 2, regarding which KDFs are allowed, is delegated
+            // to the caller.
+
+            // NSA Guide Prerequisite 3, "Prior to or during the key-agreement process,
+            // each party shall obtain the identifier associated with the other party
+            // during the key-agreement scheme," is delegated to the caller.
+
+            // NSA Guide Step 1 is handled by `EphemeralPrivateKey::generate()` and
+            // `EphemeralPrivateKey::compute_public_key()`.
+
+            let mut shared_key = [0u8; ec::ELEM_MAX_BYTES];
+            let shared_key = &mut shared_key[..curve.elem_scalar_seed_len];
+
+            // NSA Guide Steps 2, 3, and 4.
+            //
+            // We have a pretty liberal interpretation of the NIST's spec's "Destroy"
+            // that doesn't meet the NSA requirement to "zeroize."
+            (alg.decapsulate)(shared_key, &self.private_key, peer_public_key)
+                .map_err(|_| error_value)?;
+
+            // NSA Guide Steps 5 and 6.
+            //
+            // Again, we have a pretty liberal interpretation of the NIST's spec's
+            // "Destroy" that doesn't meet the NSA requirement to "zeroize."
+            let ss = kdf(shared_key)?;
+
+            Ok((Ciphertext(pk.as_ref().to_vec()), ss))
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn decapsulate<F, R, E>(
+        &self,
+        peer_public_value: untrusted::Input,
+        error_value: E,
+        kdf: F,
+    ) -> Result<R, E>
+    where
+        F: FnOnce(&[u8]) -> Result<R, E>,
+    {
+        if let AlgorithmIdentifier::Curve(_) = self.alg.algorithm {
+            let (_, ss) = self.encapsulate(peer_public_value, error_value, kdf)?;
+            Ok(ss)
+        } else {
+            panic!()
+        }
     }
 
     #[cfg(test)]
     pub fn bytes(&'a self) -> &'a [u8] { self.private_key.bytes_less_safe() }
 }
 
-/// A public key for key agreement.
 #[derive(Clone)]
-pub struct PublicKey(ec::PublicKey);
+pub enum PublicKey {
+    ECPublicKey(Box<ec::PublicKey>),
+    KemPublicKey(Vec<u8>),
+}
 
 impl AsRef<[u8]> for PublicKey {
-    fn as_ref(&self) -> &[u8] { self.0.as_ref() }
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            PublicKey::ECPublicKey(x) => x.as_ref().as_ref(),
+            PublicKey::KemPublicKey(x) => x.as_ref(),
+        }
+    }
 }
 
 derive_debug_self_as_ref_hex_bytes!(PublicKey);
+
+/// The public value for key agreement
+pub struct Ciphertext(Vec<u8>);
+
+impl Ciphertext {
+    pub fn new(vec: Vec<u8>) -> Self { Ciphertext(vec) }
+}
+
+impl AsRef<[u8]> for Ciphertext {
+    fn as_ref(&self) -> &[u8] { self.0.as_ref() }
+}
+
+derive_debug_self_as_ref_hex_bytes!(Ciphertext);
 
 /// Performs a key agreement with an ephemeral private key and the given public
 /// key.
@@ -163,47 +278,29 @@ derive_debug_self_as_ref_hex_bytes!(PublicKey);
 /// After the key agreement is done, `agree_ephemeral` calls `kdf` with the raw
 /// key material from the key agreement operation and then returns what `kdf`
 /// returns.
-pub fn agree_ephemeral<F, R, E>(
-    my_private_key: EphemeralPrivateKey, peer_public_key_alg: &Algorithm,
-    peer_public_key: untrusted::Input, error_value: E, kdf: F,
+pub fn decapsulate<F, R, E>(
+    my_private_key: EphemeralPrivateKey,
+    peer_public_value: untrusted::Input,
+    error_value: E,
+    kdf: F,
 ) -> Result<R, E>
 where
     F: FnOnce(&[u8]) -> Result<R, E>,
 {
-    // NSA Guide Prerequisite 1.
-    //
-    // The domain parameters are hard-coded. This check verifies that the
-    // peer's public key's domain parameters match the domain parameters of
-    // this private key.
-    if peer_public_key_alg != my_private_key.alg {
-        return Err(error_value);
-    }
+    my_private_key.decapsulate(peer_public_value, error_value, kdf)
+}
 
-    let alg = &my_private_key.alg;
-
-    // NSA Guide Prerequisite 2, regarding which KDFs are allowed, is delegated
-    // to the caller.
-
-    // NSA Guide Prerequisite 3, "Prior to or during the key-agreement process,
-    // each party shall obtain the identifier associated with the other party
-    // during the key-agreement scheme," is delegated to the caller.
-
-    // NSA Guide Step 1 is handled by `EphemeralPrivateKey::generate()` and
-    // `EphemeralPrivateKey::compute_public_key()`.
-
-    let mut shared_key = [0u8; ec::ELEM_MAX_BYTES];
-    let shared_key = &mut shared_key[..alg.curve.elem_scalar_seed_len];
-
-    // NSA Guide Steps 2, 3, and 4.
-    //
-    // We have a pretty liberal interpretation of the NIST's spec's "Destroy"
-    // that doesn't meet the NSA requirement to "zeroize."
-    (alg.ecdh)(shared_key, &my_private_key.private_key, peer_public_key)
-        .map_err(|_| error_value)?;
-
-    // NSA Guide Steps 5 and 6.
-    //
-    // Again, we have a pretty liberal interpretation of the NIST's spec's
-    // "Destroy" that doesn't meet the NSA requirement to "zeroize."
-    kdf(shared_key)
+pub fn encapsulate<F, R, E>(
+    rng: &dyn rand::SecureRandom,
+    algorithm: &Algorithm,
+    peer_public_key: untrusted::Input,
+    error_value: E,
+    kdf: F,
+) -> Result<(Ciphertext, R), E>
+where
+    F: FnOnce(&[u8]) -> Result<R, E>,
+{
+    let (ct, ss) = (algorithm.encapsulate)(peer_public_key, rng).map_err(|_| error_value)?;
+    let ss = kdf(&ss)?;
+    Ok((ct, ss))
 }

@@ -131,3 +131,5 @@ mod sealed {
     // ```
     pub trait Sealed {}
 }
+
+pub mod kem;

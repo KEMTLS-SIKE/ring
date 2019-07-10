@@ -36,9 +36,28 @@ static CURVE25519: ec::Curve = ec::Curve {
 /// [RFC 7748]: https://tools.ietf.org/html/rfc7748
 /// [RFC 7748 section 6.1]: https://tools.ietf.org/html/rfc7748#section-6.1
 pub static X25519: agreement::Algorithm = agreement::Algorithm {
-    curve: &CURVE25519,
-    ecdh: x25519_ecdh,
+    algorithm: agreement::AlgorithmIdentifier::Curve(&CURVE25519),
+    encapsulate: x25519_encapsulate,
+    decapsulate: x25519_ecdh,
+    keypair: x25519_keypair,
 };
+
+fn x25519_keypair(rng: &dyn rand::SecureRandom) -> Result<(agreement::PrivateKey, agreement::PublicKey), error::Unspecified> {
+    let cpu_features = cpu::features();
+    let sk = ec::Seed::generate(&CURVE25519, rng, cpu_features)?;
+    let pk = sk.compute_public_key()?;
+    Ok((agreement::PrivateKey::ECPrivateKey(Box::new(sk)), agreement::PublicKey::ECPublicKey(Box::new(pk))))
+}
+
+fn x25519_encapsulate(peer_public_key: untrusted::Input, rng: &rand::SecureRandom) -> Result<(agreement::Ciphertext, agreement::SharedSecret), error::Unspecified> {
+    let cpu_features = cpu::features();
+    let sk = ec::Seed::generate(&CURVE25519, rng, cpu_features)?;
+    let pk = sk.compute_public_key()?;
+    let ct = agreement::Ciphertext::new(pk.as_ref().to_vec());
+    let mut ss = vec![0; SHARED_SECRET_LEN];
+    x25519_ecdh(&mut ss, &agreement::PrivateKey::ECPrivateKey(Box::new(sk)), peer_public_key)?;
+    Ok((ct, ss))
+}
 
 fn x25519_check_private_key_bytes(bytes: &[u8]) -> Result<(), error::Unspecified> {
     debug_assert_eq!(bytes.len(), PRIVATE_KEY_LEN);
@@ -46,13 +65,15 @@ fn x25519_check_private_key_bytes(bytes: &[u8]) -> Result<(), error::Unspecified
 }
 
 fn x25519_generate_private_key(
-    rng: &rand::SecureRandom, out: &mut [u8],
+    rng: &rand::SecureRandom,
+    out: &mut [u8],
 ) -> Result<(), error::Unspecified> {
     rng.fill(out)
 }
 
 fn x25519_public_from_private(
-    public_out: &mut [u8], private_key: &ec::Seed,
+    public_out: &mut [u8],
+    private_key: &ec::Seed,
 ) -> Result<(), error::Unspecified> {
     let public_out = public_out.try_into_()?;
 
@@ -75,7 +96,8 @@ fn x25519_public_from_private(
 
     extern "C" {
         fn GFp_x25519_public_from_private_generic(
-            public_key_out: &mut PublicKey, private_key: &PrivateKey,
+            public_key_out: &mut PublicKey,
+            private_key: &PrivateKey,
         );
     }
     unsafe {
@@ -86,56 +108,68 @@ fn x25519_public_from_private(
 }
 
 fn x25519_ecdh(
-    out: &mut [u8], my_private_key: &ec::Seed, peer_public_key: untrusted::Input,
+    out: &mut [u8],
+    my_private_key: &agreement::PrivateKey,
+    peer_public_key: untrusted::Input,
 ) -> Result<(), error::Unspecified> {
-    let cpu_features = my_private_key.cpu_features;
-    let my_private_key = my_private_key.bytes_less_safe().try_into_()?;
-    let peer_public_key: &[u8; PUBLIC_KEY_LEN] =
-        peer_public_key.as_slice_less_safe().try_into_()?;
+    if let agreement::PrivateKey::ECPrivateKey(my_private_key) = my_private_key {
+        let cpu_features = my_private_key.cpu_features;
+        let my_private_key = my_private_key.bytes_less_safe().try_into_()?;
+        let peer_public_key: &[u8; PUBLIC_KEY_LEN] =
+            peer_public_key.as_slice_less_safe().try_into_()?;
 
-    #[cfg_attr(not(target_arch = "arm"), allow(unused_variables))]
-    fn scalar_mult(
-        out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint,
-        cpu_features: cpu::Features,
-    ) {
-        #[cfg(target_arch = "arm")]
-        {
-            if cpu::arm::NEON.available(cpu_features) {
-                return x25519_neon(out, scalar, point);
+        #[cfg_attr(not(target_arch = "arm"), allow(unused_variables))]
+        fn scalar_mult(
+            out: &mut ops::EncodedPoint,
+            scalar: &ops::Scalar,
+            point: &ops::EncodedPoint,
+            cpu_features: cpu::Features,
+        ) {
+            #[cfg(target_arch = "arm")]
+            {
+                if cpu::arm::NEON.available(cpu_features) {
+                    return x25519_neon(out, scalar, point);
+                }
+            }
+
+            extern "C" {
+                fn GFp_x25519_scalar_mult_generic(
+                    out: &mut ops::EncodedPoint,
+                    scalar: &ops::Scalar,
+                    point: &ops::EncodedPoint,
+                );
+            }
+            unsafe {
+                GFp_x25519_scalar_mult_generic(out, scalar, point);
             }
         }
 
-        extern "C" {
-            fn GFp_x25519_scalar_mult_generic(
-                out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint,
-            );
+        scalar_mult(
+            out.try_into_()?,
+            my_private_key,
+            peer_public_key,
+            cpu_features,
+        );
+
+        let zeros: SharedSecret = [0; SHARED_SECRET_LEN];
+        if constant_time::verify_slices_are_equal(out, &zeros).is_ok() {
+            // All-zero output results when the input is a point of small order.
+            return Err(error::Unspecified);
         }
-        unsafe {
-            GFp_x25519_scalar_mult_generic(out, scalar, point);
-        }
+
+        Ok(())
+    } else {
+        Err(error::Unspecified)
     }
-
-    scalar_mult(
-        out.try_into_()?,
-        my_private_key,
-        peer_public_key,
-        cpu_features,
-    );
-
-    let zeros: SharedSecret = [0; SHARED_SECRET_LEN];
-    if constant_time::verify_slices_are_equal(out, &zeros).is_ok() {
-        // All-zero output results when the input is a point of small order.
-        return Err(error::Unspecified);
-    }
-
-    Ok(())
 }
 
 #[cfg(target_arch = "arm")]
 fn x25519_neon(out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint) {
     extern "C" {
         fn GFp_x25519_NEON(
-            out: &mut ops::EncodedPoint, scalar: &ops::Scalar, point: &ops::EncodedPoint,
+            out: &mut ops::EncodedPoint,
+            scalar: &ops::Scalar,
+            point: &ops::EncodedPoint,
         );
     }
     unsafe { GFp_x25519_NEON(out, scalar, point) }

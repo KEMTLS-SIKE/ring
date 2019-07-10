@@ -31,6 +31,10 @@ pub struct Curve {
         fn(public_out: &mut [u8], private_key: &Seed) -> Result<(), error::Unspecified>,
 }
 
+impl PartialEq for Curve {
+    fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+
 derive_debug_via_id!(Curve);
 
 #[derive(Clone, Copy, Debug, PartialEq)]

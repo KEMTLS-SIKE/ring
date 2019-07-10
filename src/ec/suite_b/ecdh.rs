@@ -18,10 +18,12 @@ use super::{ops::*, private_key::*, public_key::*};
 use crate::{agreement, ec, error};
 use untrusted;
 
+use crate::{cpu, rand};
+
 /// A key agreement algorithm.
 macro_rules! ecdh {
     ( $NAME:ident, $curve:expr, $name_str:expr, $private_key_ops:expr,
-      $public_key_ops:expr, $ecdh:ident ) => {
+      $public_key_ops:expr, $ecdh:ident, $encapsulate:ident, $keypair:ident ) => {
         #[doc = "ECDH using the NSA Suite B"]
         #[doc=$name_str]
         #[doc = "curve."]
@@ -40,20 +42,43 @@ macro_rules! ecdh {
         /// [Suite B Implementer's Guide to NIST SP 800-56A]:
         ///     https://github.com/briansmith/ring/blob/master/doc/ecdh.pdf
         pub static $NAME: agreement::Algorithm = agreement::Algorithm {
-            curve: $curve,
-            ecdh: $ecdh,
+            algorithm: agreement::AlgorithmIdentifier::Curve($curve),
+            decapsulate: $ecdh,
+            encapsulate: $encapsulate,
+            keypair: $keypair,
         };
 
+        fn $keypair(rng: &dyn rand::SecureRandom) -> Result<(agreement::PrivateKey, agreement::PublicKey), error::Unspecified> {
+            let cpu_features = cpu::features();
+            let sk = ec::Seed::generate(&$curve, rng, cpu_features)?;
+            let pk = sk.compute_public_key()?;
+            Ok((agreement::PrivateKey::ECPrivateKey(Box::new(sk)), agreement::PublicKey::ECPublicKey(Box::new(pk))))
+        }
+
+        fn $encapsulate(peer_public_key: untrusted::Input, rng: &rand::SecureRandom) -> Result<(agreement::Ciphertext, agreement::SharedSecret), error::Unspecified> {
+            let cpu_features = cpu::features();
+            let sk = ec::Seed::generate(&$curve, rng, cpu_features)?;
+            let pk = sk.compute_public_key()?;
+            let ct = agreement::Ciphertext::new(pk.as_ref().to_vec());
+            let mut ss = vec![0; ec::SCALAR_MAX_BYTES];
+            $ecdh(&mut ss, &agreement::PrivateKey::ECPrivateKey(Box::new(sk)), peer_public_key)?;
+            Ok((ct, ss))
+        }
+
         fn $ecdh(
-            out: &mut [u8], my_private_key: &ec::Seed, peer_public_key: untrusted::Input,
-        ) -> Result<(), error::Unspecified> {
-            ecdh(
-                $private_key_ops,
-                $public_key_ops,
-                out,
-                my_private_key,
-                peer_public_key,
-            )
+            out: &mut [u8], my_private_key: &agreement::PrivateKey, peer_public_key: untrusted::Input,
+            ) -> Result<(), error::Unspecified> {
+            if let agreement::PrivateKey::ECPrivateKey(my_private_key) = my_private_key {
+                ecdh(
+                    $private_key_ops,
+                    $public_key_ops,
+                    out,
+                    my_private_key,
+                    peer_public_key,
+                    )
+            } else {
+                Err(error::Unspecified)
+            }
         }
     };
 }
@@ -64,7 +89,9 @@ ecdh!(
     "P-256 (secp256r1)",
     &p256::PRIVATE_KEY_OPS,
     &p256::PUBLIC_KEY_OPS,
-    p256_ecdh
+    p256_ecdh,
+    p256_encapsulate,
+    p256_keypair
 );
 
 ecdh!(
@@ -73,7 +100,9 @@ ecdh!(
     "P-384 (secp384r1)",
     &p384::PRIVATE_KEY_OPS,
     &p384::PUBLIC_KEY_OPS,
-    p384_ecdh
+    p384_ecdh,
+    p354_encapsulate,
+    p354_keypair
 );
 
 fn ecdh(
