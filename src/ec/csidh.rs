@@ -42,7 +42,7 @@ fn csidh_public_from_private(
 pub static CSIDH: agreement::Algorithm = agreement::Algorithm {
     algorithm: agreement::AlgorithmIdentifier::Curve(&CURVE_CSIDH),
     encapsulate: encapsulate,
-    decapsulate: csidh_ecdh,
+    decapsulate: decapsulate,
     keypair: csidh_keypair,
 };
 
@@ -61,17 +61,15 @@ fn encapsulate(peer_public_key: untrusted::Input, _rng: &rand::SecureRandom) -> 
     Ok((agreement::Ciphertext::new(pk.as_slice().to_vec()), csidh_rust::agreement(&peer_pk, &sk).to_vec()))
 }
 
-fn csidh_ecdh(
-    out: &mut [u8],
+fn decapsulate(
     my_private_key: &agreement::PrivateKey,
     peer_public_key: untrusted::Input,
-) -> Result<(), error::Unspecified> {
+) -> Result<Vec<u8>, error::Unspecified> {
     if let agreement::PrivateKey::ECPrivateKey(my_private_key) = my_private_key {
         let sk = seed_to_private(my_private_key);
         let pk = csidh_rust::CSIDHPublicKey::from_bytes(peer_public_key.as_slice_less_safe());
 
-        out[..64].copy_from_slice(&csidh_rust::agreement(&pk, &sk)[..]);
-        Ok(())
+        Ok(csidh_rust::agreement(&pk, &sk).to_vec())
     } else {
         Err(error::Unspecified)
     }

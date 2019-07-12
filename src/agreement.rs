@@ -75,12 +75,17 @@ pub use crate::ec::{
     suite_b::ecdh::{ECDH_P256, ECDH_P384},
 };
 
-pub use crate::kem;
+pub use crate::kem::{
+    self,
+    KYBER512,
+    KYBER768,
+    KYBER1024,
+};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum AlgorithmIdentifier {
     Curve(&'static ec::Curve),
-    Kem(kem::Algorithm),
+    KEM,
 }
 
 pub(crate) enum PrivateKey {
@@ -92,10 +97,9 @@ pub(crate) enum PrivateKey {
 pub struct Algorithm {
     pub(crate) algorithm: AlgorithmIdentifier,
     pub(crate) decapsulate: fn(
-        out: &mut [u8],
         private_key: &PrivateKey,
         ciphertext: untrusted::Input,
-    ) -> Result<(), error::Unspecified>,
+    ) -> Result<Vec<u8>, error::Unspecified>,
     pub(crate) encapsulate: fn(
         peer_public_key: untrusted::Input,
         rng: &rand::SecureRandom,
@@ -163,45 +167,11 @@ impl<'a> EphemeralPrivateKey {
     where
         F: FnOnce(&[u8]) -> Result<R, E>,
     {
-        if let AlgorithmIdentifier::Curve(curve) = self.alg.algorithm {
-            let pk = self.compute_public_key().unwrap();
-            // NSA Guide Prerequisite 1.
-            //
-            // The domain parameters are hard-coded. This check verifies that the
-            // peer's public key's domain parameters match the domain parameters of
-            // this private key.
-            let alg = &self.alg;
+        let rng = rand::SystemRandom::new();
+        let (ct, shared_key) = (self.alg.encapsulate)(peer_public_key, &rng)
+                                    .map_err(|_| error_value)?;
 
-            // NSA Guide Prerequisite 2, regarding which KDFs are allowed, is delegated
-            // to the caller.
-
-            // NSA Guide Prerequisite 3, "Prior to or during the key-agreement process,
-            // each party shall obtain the identifier associated with the other party
-            // during the key-agreement scheme," is delegated to the caller.
-
-            // NSA Guide Step 1 is handled by `EphemeralPrivateKey::generate()` and
-            // `EphemeralPrivateKey::compute_public_key()`.
-
-            let mut shared_key = [0u8; ec::ELEM_MAX_BYTES];
-            let shared_key = &mut shared_key[..curve.elem_scalar_seed_len];
-
-            // NSA Guide Steps 2, 3, and 4.
-            //
-            // We have a pretty liberal interpretation of the NIST's spec's "Destroy"
-            // that doesn't meet the NSA requirement to "zeroize."
-            (alg.decapsulate)(shared_key, &self.private_key, peer_public_key)
-                .map_err(|_| error_value)?;
-
-            // NSA Guide Steps 5 and 6.
-            //
-            // Again, we have a pretty liberal interpretation of the NIST's spec's
-            // "Destroy" that doesn't meet the NSA requirement to "zeroize."
-            let ss = kdf(shared_key)?;
-
-            Ok((Ciphertext(pk.as_ref().to_vec()), ss))
-        } else {
-            panic!()
-        }
+        Ok((ct, kdf(&shared_key)?))
     }
 
     pub fn decapsulate<F, R, E>(
@@ -213,12 +183,8 @@ impl<'a> EphemeralPrivateKey {
     where
         F: FnOnce(&[u8]) -> Result<R, E>,
     {
-        if let AlgorithmIdentifier::Curve(_) = self.alg.algorithm {
-            let (_, ss) = self.encapsulate(peer_public_value, error_value, kdf)?;
-            Ok(ss)
-        } else {
-            panic!()
-        }
+        let ss = (self.alg.decapsulate)(&self.private_key, peer_public_value).map_err(|_| error_value)?;
+        Ok(kdf(&ss)?)
     }
 
     #[cfg(test)]

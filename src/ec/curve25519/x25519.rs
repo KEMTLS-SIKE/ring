@@ -38,7 +38,7 @@ static CURVE25519: ec::Curve = ec::Curve {
 pub static X25519: agreement::Algorithm = agreement::Algorithm {
     algorithm: agreement::AlgorithmIdentifier::Curve(&CURVE25519),
     encapsulate: x25519_encapsulate,
-    decapsulate: x25519_ecdh,
+    decapsulate: decapsulate,
     keypair: x25519_keypair,
 };
 
@@ -54,8 +54,7 @@ fn x25519_encapsulate(peer_public_key: untrusted::Input, rng: &rand::SecureRando
     let sk = ec::Seed::generate(&CURVE25519, rng, cpu_features)?;
     let pk = sk.compute_public_key()?;
     let ct = agreement::Ciphertext::new(pk.as_ref().to_vec());
-    let mut ss = vec![0; SHARED_SECRET_LEN];
-    x25519_ecdh(&mut ss, &agreement::PrivateKey::ECPrivateKey(Box::new(sk)), peer_public_key)?;
+    let ss = decapsulate(&agreement::PrivateKey::ECPrivateKey(Box::new(sk)), peer_public_key)?;
     Ok((ct, ss))
 }
 
@@ -107,12 +106,12 @@ fn x25519_public_from_private(
     Ok(())
 }
 
-fn x25519_ecdh(
-    out: &mut [u8],
+fn decapsulate(
     my_private_key: &agreement::PrivateKey,
     peer_public_key: untrusted::Input,
-) -> Result<(), error::Unspecified> {
+) -> Result<Vec<u8>, error::Unspecified> {
     if let agreement::PrivateKey::ECPrivateKey(my_private_key) = my_private_key {
+        let mut out = [0; SHARED_SECRET_LEN];
         let cpu_features = my_private_key.cpu_features;
         let my_private_key = my_private_key.bytes_less_safe().try_into_()?;
         let peer_public_key: &[u8; PUBLIC_KEY_LEN] =
@@ -145,19 +144,19 @@ fn x25519_ecdh(
         }
 
         scalar_mult(
-            out.try_into_()?,
+            &mut out,
             my_private_key,
             peer_public_key,
             cpu_features,
         );
 
         let zeros: SharedSecret = [0; SHARED_SECRET_LEN];
-        if constant_time::verify_slices_are_equal(out, &zeros).is_ok() {
+        if constant_time::verify_slices_are_equal(&out, &zeros).is_ok() {
             // All-zero output results when the input is a point of small order.
             return Err(error::Unspecified);
         }
 
-        Ok(())
+        Ok(out.to_vec())
     } else {
         Err(error::Unspecified)
     }

@@ -60,22 +60,23 @@ macro_rules! ecdh {
             let sk = ec::Seed::generate(&$curve, rng, cpu_features)?;
             let pk = sk.compute_public_key()?;
             let ct = agreement::Ciphertext::new(pk.as_ref().to_vec());
-            let mut ss = vec![0; ec::SCALAR_MAX_BYTES];
-            $ecdh(&mut ss, &agreement::PrivateKey::ECPrivateKey(Box::new(sk)), peer_public_key)?;
+            let ss = $ecdh(&agreement::PrivateKey::ECPrivateKey(Box::new(sk)), peer_public_key)?;
             Ok((ct, ss))
         }
 
         fn $ecdh(
-            out: &mut [u8], my_private_key: &agreement::PrivateKey, peer_public_key: untrusted::Input,
-            ) -> Result<(), error::Unspecified> {
+            my_private_key: &agreement::PrivateKey, peer_public_key: untrusted::Input,
+            ) -> Result<Vec<u8>, error::Unspecified> {
+            let mut out = [0; ec::SCALAR_MAX_BYTES];
             if let agreement::PrivateKey::ECPrivateKey(my_private_key) = my_private_key {
                 ecdh(
                     $private_key_ops,
                     $public_key_ops,
-                    out,
+                    &mut out,
                     my_private_key,
                     peer_public_key,
-                    )
+                    )?;
+                Ok(out.to_vec())
             } else {
                 Err(error::Unspecified)
             }
