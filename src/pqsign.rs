@@ -150,13 +150,6 @@ impl signature::VerificationAlgorithm for PQSignatureScheme {
             signature: signature.as_slice_less_safe().to_vec(),
         };
 
-        {
-            use std::io::prelude::*;
-            use std::fs::File;
-            let mut f = File::create("/tmp/msg.bin").unwrap();
-            f.write_all(msg.as_slice_less_safe()).unwrap();
-        }
-
         if let Ok(()) = (self.verify)(msg.as_slice_less_safe(), &sig, &pk) {
             Ok(())
         } else {

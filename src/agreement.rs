@@ -74,6 +74,7 @@ pub use crate::ec::{
     curve25519::x25519::X25519,
     suite_b::ecdh::{ECDH_P256, ECDH_P384},
 };
+use crate::cpu;
 
 pub use crate::kem::{
     self,
@@ -82,25 +83,40 @@ pub use crate::kem::{
     KYBER1024,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum AlgorithmIdentifier {
     Curve(&'static ec::Curve),
     KEM,
 }
 
-pub(crate) enum PrivateKey {
+#[derive(Clone)]
+pub enum PrivateKey {
     ECPrivateKey(Box<ec::Seed>),
     KemPrivateKey(Vec<u8>),
 }
 
+impl PrivateKey {
+    pub fn from(alg: &Algorithm, input: untrusted::Input) -> Self {
+        if alg.algorithm == AlgorithmIdentifier::KEM {
+            PrivateKey::KemPrivateKey(input.as_slice_less_safe().to_vec())
+        } else if let AlgorithmIdentifier::Curve(curve) = alg.algorithm {
+            PrivateKey::ECPrivateKey(Box::new(ec::Seed::from_bytes(
+                curve, input, cpu::features()).unwrap()))
+        } else {
+            unreachable!()
+        }
+    }
+}
+
 /// A key agreement algorithm.
+#[derive(Clone)]
 pub struct Algorithm {
     pub(crate) algorithm: AlgorithmIdentifier,
-    pub(crate) decapsulate: fn(
+    pub decapsulate: fn(
         private_key: &PrivateKey,
         ciphertext: untrusted::Input,
     ) -> Result<Vec<u8>, error::Unspecified>,
-    pub(crate) encapsulate: fn(
+    pub encapsulate: fn(
         peer_public_key: untrusted::Input,
         rng: &rand::SecureRandom,
     ) -> Result<(Ciphertext, SharedSecret), error::Unspecified>,
@@ -120,6 +136,7 @@ impl PartialEq for Algorithm {
 /// An ephemeral private key for use (only) with `agree_ephemeral`. The
 /// signature of `agree_ephemeral` ensures that an `EphemeralPrivateKey` can be
 /// used for at most one key agreement.
+#[derive(Clone)]
 pub struct EphemeralPrivateKey {
     private_key: PrivateKey,
     alg: &'static Algorithm,

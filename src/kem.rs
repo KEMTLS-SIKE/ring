@@ -1,4 +1,4 @@
-use crate::{agreement, error, rand};
+use crate::{agreement, error, pkcs8, rand};
 use untrusted;
 
 pub use pqcrypto::traits::kem::PublicKey;
@@ -66,3 +66,19 @@ macro_rules! kem_implementation {
 kem_implementation!(kyber512, Kyber512, KYBER512);
 kem_implementation!(kyber768, Kyber768, KYBER768);
 kem_implementation!(kyber1024, Kyber1024, KYBER1024);
+
+pub fn private_key_from_pkcs8(
+    alg: &agreement::Algorithm,
+    id: u16,
+    input: untrusted::Input,
+) -> Result<agreement::PrivateKey, error::KeyRejected> {
+    let mut template = b"\x06\x0B\x2A\x06\x01\x04\x01\x82\x37\x59\x02".to_vec();
+    template.push((id as u16 >> 8) as u8);
+    template.push(id as u8);
+    // push null
+    template.push(0x05);
+    template.push(0);
+    let (private_key, _) = pkcs8::unwrap_key_(&template, pkcs8::Version::V1OrV2, input)?;
+
+    Ok(agreement::PrivateKey::from(alg, private_key))
+}

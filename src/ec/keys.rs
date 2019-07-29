@@ -16,6 +16,7 @@ impl KeyPair {
     pub fn split(self) -> (Seed, PublicKey) { (self.seed, self.public_key) }
 }
 
+#[derive(Clone)]
 pub struct Seed {
     bytes: [u8; SEED_MAX_BYTES],
     curve: &'static Curve,
@@ -42,7 +43,8 @@ impl Seed {
         let _ = cpu::features();
         let bytes = bytes.as_slice_less_safe();
         if curve.elem_scalar_seed_len != bytes.len() {
-            return Err(error::Unspecified);
+            panic!("{} != {}", curve.elem_scalar_seed_len, bytes.len());
+            //return Err(error::Unspecified);
         }
         (curve.check_private_key_bytes)(bytes)?;
         let mut r = Seed {
