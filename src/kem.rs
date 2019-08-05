@@ -67,6 +67,20 @@ kem_implementation!(kyber512, Kyber512, KYBER512);
 kem_implementation!(kyber768, Kyber768, KYBER768);
 kem_implementation!(kyber1024, Kyber1024, KYBER1024);
 
+/// Generate the algorithm id for the algorithm
+pub fn algorithm_to_id(alg: &agreement::Algorithm) -> u16 {
+    if alg == &KYBER512 {
+        101
+    } else if alg == &KYBER768 {
+        102
+    } else if alg == &KYBER1024 {
+        103
+    } else {
+        unreachable!("Should not be reached")
+    }
+}
+
+/// Constructs the agreement private key from PKCS8.
 pub fn private_key_from_pkcs8(
     alg: &agreement::Algorithm,
     id: u16,
