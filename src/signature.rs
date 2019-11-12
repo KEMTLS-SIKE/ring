@@ -327,6 +327,12 @@ pub use crate::pqsign::{
     SPHINCS_HARAKA_256S_ROBUST,
     SPHINCS_HARAKA_256F_SIMPLE,
     SPHINCS_HARAKA_256F_ROBUST,
+    MQDSS_48,
+    MQDSS_64,
+    QTESLA_P_III,
+    QTESLA_P_I,
+    FALCON_512,
+    FALCON_1024,
 };
 
 #[cfg(feature = "use_heap")]

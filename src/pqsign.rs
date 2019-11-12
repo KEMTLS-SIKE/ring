@@ -44,6 +44,12 @@ pub enum AlgorithmID {
     SPHINCS_HARAKA_256S_ROBUST = 0xFE21,
     SPHINCS_HARAKA_256F_SIMPLE = 0xFE22,
     SPHINCS_HARAKA_256F_ROBUST = 0xFE23,
+    MQDSS_48 = 0xFE24,
+    MQDSS_64 = 0xFE25,
+    QTESLA_P_III = 0xFE26,
+    QTESLA_P_I = 0xFE27,
+    FALCON_512 = 0xFE28,
+    FALCON_1024 = 0xFE29,
 }
 
 #[derive(Clone)]
@@ -158,7 +164,7 @@ impl signature::VerificationAlgorithm for PQSignatureScheme {
     }
 }
 
-macro_rules! sphincs_scheme {
+macro_rules! pqsig_scheme {
     ($id: ident, $ns: ident) => {
         use pqcrypto::sign::$ns;
         pub static $id: PQSignatureScheme = PQSignatureScheme {
@@ -204,42 +210,48 @@ macro_rules! sphincs_scheme {
     };
 }
 
-sphincs_scheme!(SPHINCS_SHA_256_128S_SIMPLE, sphincssha256128ssimple);
-sphincs_scheme!(SPHINCS_SHA_256_128S_ROBUST, sphincssha256128srobust);
-sphincs_scheme!(SPHINCS_SHA_256_128F_SIMPLE, sphincssha256128fsimple);
-sphincs_scheme!(SPHINCS_SHA_256_128F_ROBUST, sphincssha256128frobust);
-sphincs_scheme!(SPHINCS_SHA_256_192S_SIMPLE, sphincssha256192ssimple);
-sphincs_scheme!(SPHINCS_SHA_256_192S_ROBUST, sphincssha256192srobust);
-sphincs_scheme!(SPHINCS_SHA_256_192F_SIMPLE, sphincssha256192fsimple);
-sphincs_scheme!(SPHINCS_SHA_256_192F_ROBUST, sphincssha256192frobust);
-sphincs_scheme!(SPHINCS_SHA_256_256S_SIMPLE, sphincssha256256ssimple);
-sphincs_scheme!(SPHINCS_SHA_256_256S_ROBUST, sphincssha256256srobust);
-sphincs_scheme!(SPHINCS_SHA_256_256F_SIMPLE, sphincssha256256fsimple);
-sphincs_scheme!(SPHINCS_SHA_256_256F_ROBUST, sphincssha256256frobust);
-sphincs_scheme!(SPHINCS_SHAKE_256_128S_SIMPLE, sphincsshake256128ssimple);
-sphincs_scheme!(SPHINCS_SHAKE_256_128S_ROBUST, sphincsshake256128srobust);
-sphincs_scheme!(SPHINCS_SHAKE_256_128F_SIMPLE, sphincsshake256128fsimple);
-sphincs_scheme!(SPHINCS_SHAKE_256_128F_ROBUST, sphincsshake256128frobust);
-sphincs_scheme!(SPHINCS_SHAKE_256_192S_SIMPLE, sphincsshake256192ssimple);
-sphincs_scheme!(SPHINCS_SHAKE_256_192S_ROBUST, sphincsshake256192srobust);
-sphincs_scheme!(SPHINCS_SHAKE_256_192F_SIMPLE, sphincsshake256192fsimple);
-sphincs_scheme!(SPHINCS_SHAKE_256_192F_ROBUST, sphincsshake256192frobust);
-sphincs_scheme!(SPHINCS_SHAKE_256_256S_SIMPLE, sphincsshake256256ssimple);
-sphincs_scheme!(SPHINCS_SHAKE_256_256S_ROBUST, sphincsshake256256srobust);
-sphincs_scheme!(SPHINCS_SHAKE_256_256F_SIMPLE, sphincsshake256256fsimple);
-sphincs_scheme!(SPHINCS_SHAKE_256_256F_ROBUST, sphincsshake256256frobust);
-sphincs_scheme!(SPHINCS_HARAKA_128S_SIMPLE, sphincsharaka128ssimple);
-sphincs_scheme!(SPHINCS_HARAKA_128S_ROBUST, sphincsharaka128srobust);
-sphincs_scheme!(SPHINCS_HARAKA_128F_SIMPLE, sphincsharaka128fsimple);
-sphincs_scheme!(SPHINCS_HARAKA_128F_ROBUST, sphincsharaka128frobust);
-sphincs_scheme!(SPHINCS_HARAKA_192S_SIMPLE, sphincsharaka192ssimple);
-sphincs_scheme!(SPHINCS_HARAKA_192S_ROBUST, sphincsharaka192srobust);
-sphincs_scheme!(SPHINCS_HARAKA_192F_SIMPLE, sphincsharaka192fsimple);
-sphincs_scheme!(SPHINCS_HARAKA_192F_ROBUST, sphincsharaka192frobust);
-sphincs_scheme!(SPHINCS_HARAKA_256S_SIMPLE, sphincsharaka256ssimple);
-sphincs_scheme!(SPHINCS_HARAKA_256S_ROBUST, sphincsharaka256srobust);
-sphincs_scheme!(SPHINCS_HARAKA_256F_SIMPLE, sphincsharaka256fsimple);
-sphincs_scheme!(SPHINCS_HARAKA_256F_ROBUST, sphincsharaka256frobust);
+pqsig_scheme!(SPHINCS_SHA_256_128S_SIMPLE, sphincssha256128ssimple);
+pqsig_scheme!(SPHINCS_SHA_256_128S_ROBUST, sphincssha256128srobust);
+pqsig_scheme!(SPHINCS_SHA_256_128F_SIMPLE, sphincssha256128fsimple);
+pqsig_scheme!(SPHINCS_SHA_256_128F_ROBUST, sphincssha256128frobust);
+pqsig_scheme!(SPHINCS_SHA_256_192S_SIMPLE, sphincssha256192ssimple);
+pqsig_scheme!(SPHINCS_SHA_256_192S_ROBUST, sphincssha256192srobust);
+pqsig_scheme!(SPHINCS_SHA_256_192F_SIMPLE, sphincssha256192fsimple);
+pqsig_scheme!(SPHINCS_SHA_256_192F_ROBUST, sphincssha256192frobust);
+pqsig_scheme!(SPHINCS_SHA_256_256S_SIMPLE, sphincssha256256ssimple);
+pqsig_scheme!(SPHINCS_SHA_256_256S_ROBUST, sphincssha256256srobust);
+pqsig_scheme!(SPHINCS_SHA_256_256F_SIMPLE, sphincssha256256fsimple);
+pqsig_scheme!(SPHINCS_SHA_256_256F_ROBUST, sphincssha256256frobust);
+pqsig_scheme!(SPHINCS_SHAKE_256_128S_SIMPLE, sphincsshake256128ssimple);
+pqsig_scheme!(SPHINCS_SHAKE_256_128S_ROBUST, sphincsshake256128srobust);
+pqsig_scheme!(SPHINCS_SHAKE_256_128F_SIMPLE, sphincsshake256128fsimple);
+pqsig_scheme!(SPHINCS_SHAKE_256_128F_ROBUST, sphincsshake256128frobust);
+pqsig_scheme!(SPHINCS_SHAKE_256_192S_SIMPLE, sphincsshake256192ssimple);
+pqsig_scheme!(SPHINCS_SHAKE_256_192S_ROBUST, sphincsshake256192srobust);
+pqsig_scheme!(SPHINCS_SHAKE_256_192F_SIMPLE, sphincsshake256192fsimple);
+pqsig_scheme!(SPHINCS_SHAKE_256_192F_ROBUST, sphincsshake256192frobust);
+pqsig_scheme!(SPHINCS_SHAKE_256_256S_SIMPLE, sphincsshake256256ssimple);
+pqsig_scheme!(SPHINCS_SHAKE_256_256S_ROBUST, sphincsshake256256srobust);
+pqsig_scheme!(SPHINCS_SHAKE_256_256F_SIMPLE, sphincsshake256256fsimple);
+pqsig_scheme!(SPHINCS_SHAKE_256_256F_ROBUST, sphincsshake256256frobust);
+pqsig_scheme!(SPHINCS_HARAKA_128S_SIMPLE, sphincsharaka128ssimple);
+pqsig_scheme!(SPHINCS_HARAKA_128S_ROBUST, sphincsharaka128srobust);
+pqsig_scheme!(SPHINCS_HARAKA_128F_SIMPLE, sphincsharaka128fsimple);
+pqsig_scheme!(SPHINCS_HARAKA_128F_ROBUST, sphincsharaka128frobust);
+pqsig_scheme!(SPHINCS_HARAKA_192S_SIMPLE, sphincsharaka192ssimple);
+pqsig_scheme!(SPHINCS_HARAKA_192S_ROBUST, sphincsharaka192srobust);
+pqsig_scheme!(SPHINCS_HARAKA_192F_SIMPLE, sphincsharaka192fsimple);
+pqsig_scheme!(SPHINCS_HARAKA_192F_ROBUST, sphincsharaka192frobust);
+pqsig_scheme!(SPHINCS_HARAKA_256S_SIMPLE, sphincsharaka256ssimple);
+pqsig_scheme!(SPHINCS_HARAKA_256S_ROBUST, sphincsharaka256srobust);
+pqsig_scheme!(SPHINCS_HARAKA_256F_SIMPLE, sphincsharaka256fsimple);
+pqsig_scheme!(SPHINCS_HARAKA_256F_ROBUST, sphincsharaka256frobust);
+pqsig_scheme!(MQDSS_48, mqdss48);
+pqsig_scheme!(MQDSS_64, mqdss64);
+pqsig_scheme!(QTESLA_P_III, qteslapiii);
+pqsig_scheme!(QTESLA_P_I, qteslapi);
+pqsig_scheme!(FALCON_512, falcon512);
+pqsig_scheme!(FALCON_1024, falcon1024);
 
 #[cfg(test)]
 mod tests {
