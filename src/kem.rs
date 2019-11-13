@@ -66,6 +66,32 @@ macro_rules! kem_implementation {
 kem_implementation!(kyber512, Kyber512, KYBER512);
 kem_implementation!(kyber768, Kyber768, KYBER768);
 kem_implementation!(kyber1024, Kyber1024, KYBER1024);
+kem_implementation!(kyber51290s, Kyber51290s, KYBER51290s);
+kem_implementation!(kyber76890s, Kyber76890s, KYBER76890s);
+kem_implementation!(kyber102490s, Kyber102490s, KYBER102490s);
+kem_implementation!(babybear, Babybear, BABYBEAR);
+kem_implementation!(mamabear, Mamabear, MAMABEAR);
+kem_implementation!(papabear, Papabear, PAPABEAR);
+kem_implementation!(lightsaber, Lightsaber, LIGHTSABER);
+kem_implementation!(saber, Saber, SABER);
+kem_implementation!(firesaber, Firesaber, FIRESABER);
+kem_implementation!(ledakemlt12, Ledakemlt12, LEDAKEMLT12);
+kem_implementation!(ledakemlt32, Ledakemlt32, LEDAKEMLT32);
+kem_implementation!(ledakemlt52, Ledakemlt52, LEDAKEMLT52);
+kem_implementation!(newhope512cpa, Newhope512Cpa, NEWHOPE512CPA);
+kem_implementation!(newhope512cca, Newhope512Cca, NEWHOPE512CCA);
+kem_implementation!(newhope1024cpa, Newhope1024Cpa, NEWHOPE1024CPA);
+kem_implementation!(newhope1024cca, Newhope1024Cca, NEWHOPE1024CCA);
+kem_implementation!(ntruhps2048509, Ntruhps2048509, NTRUHPS2048509);
+kem_implementation!(ntruhps2048677, Ntruhps2048677, NTRUHPS2048677);
+kem_implementation!(ntruhps4096821, Ntruhps4096821, NTRUHPS4096821);
+kem_implementation!(ntruhrss701, Ntruhrss701, NTRUHRSS701);
+kem_implementation!(frodokem640aes, Frodokem640Aes, FRODOKEM640AES);
+kem_implementation!(frodokem640shake, Frodokem640Shake, FRODOKEM640SHAKE);
+kem_implementation!(frodokem976aes, Frodokem976Aes, FRODOKEM976AES);
+kem_implementation!(frodokem976shake, Frodokem976Shake, FRODOKEM976SHAKE);
+kem_implementation!(frodokem1344aes, Frodokem1344Aes, FRODOKEM1344AES);
+kem_implementation!(frodokem1344shake, Frodokem1344Shake, FRODOKEM1344SHAKE);
 
 /// Generate the algorithm id for the algorithm
 pub fn algorithm_to_id(alg: &agreement::Algorithm) -> u16 {
@@ -75,6 +101,58 @@ pub fn algorithm_to_id(alg: &agreement::Algorithm) -> u16 {
         102
     } else if alg == &KYBER1024 {
         103
+    } else if alg == &KYBER51290s {
+        104
+    } else if alg == &KYBER76890s {
+        105
+    } else if alg == &KYBER102490s {
+        106
+    } else if alg == &BABYBEAR {
+        107
+    } else if alg == &MAMABEAR {
+        108
+    } else if alg == &PAPABEAR {
+        109
+    } else if alg == &LIGHTSABER {
+        110
+    } else if alg == &SABER {
+        111
+    } else if alg == &FIRESABER {
+        112
+    } else if alg == &LEDAKEMLT12 {
+        113
+    } else if alg == &LEDAKEMLT32 {
+        114
+    } else if alg == &LEDAKEMLT52 {
+        115
+    } else if alg == &NEWHOPE512CPA {
+        116
+    } else if alg == &NEWHOPE512CCA {
+        117
+    } else if alg == &NEWHOPE1024CPA {
+        118
+    } else if alg == &NEWHOPE1024CCA {
+        119
+    } else if alg == &NTRUHPS2048509 {
+        120
+    } else if alg == &NTRUHPS2048677 {
+        121
+    } else if alg == &NTRUHPS4096821 {
+        122
+    } else if alg == &NTRUHRSS701 {
+        123
+    } else if alg == &FRODOKEM640AES {
+        124
+    } else if alg == &FRODOKEM640SHAKE {
+        125
+    } else if alg == &FRODOKEM976AES {
+        126
+    } else if alg == &FRODOKEM976SHAKE {
+        127
+    } else if alg == &FRODOKEM1344AES {
+        128
+    } else if alg == &FRODOKEM1344SHAKE {
+        129
     } else {
         unreachable!("Should not be reached")
     }
