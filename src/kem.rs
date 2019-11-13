@@ -66,9 +66,9 @@ macro_rules! kem_implementation {
 kem_implementation!(kyber512, Kyber512, KYBER512);
 kem_implementation!(kyber768, Kyber768, KYBER768);
 kem_implementation!(kyber1024, Kyber1024, KYBER1024);
-kem_implementation!(kyber51290s, Kyber51290s, KYBER51290s);
-kem_implementation!(kyber76890s, Kyber76890s, KYBER76890s);
-kem_implementation!(kyber102490s, Kyber102490s, KYBER102490s);
+kem_implementation!(kyber51290s, Kyber51290s, KYBER51290S);
+kem_implementation!(kyber76890s, Kyber76890s, KYBER76890S);
+kem_implementation!(kyber102490s, Kyber102490s, KYBER102490S);
 kem_implementation!(babybear, Babybear, BABYBEAR);
 kem_implementation!(mamabear, Mamabear, MAMABEAR);
 kem_implementation!(papabear, Papabear, PAPABEAR);
@@ -101,11 +101,11 @@ pub fn algorithm_to_id(alg: &agreement::Algorithm) -> u16 {
         102
     } else if alg == &KYBER1024 {
         103
-    } else if alg == &KYBER51290s {
+    } else if alg == &KYBER51290S {
         104
-    } else if alg == &KYBER76890s {
+    } else if alg == &KYBER76890S {
         105
-    } else if alg == &KYBER102490s {
+    } else if alg == &KYBER102490S {
         106
     } else if alg == &BABYBEAR {
         107
