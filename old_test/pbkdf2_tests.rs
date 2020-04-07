@@ -28,7 +28,6 @@
     unused_qualifications,
     unused_results,
     variant_size_differences,
-    warnings
 )]
 
 use ring::{digest, error, pbkdf2, test, test_file};

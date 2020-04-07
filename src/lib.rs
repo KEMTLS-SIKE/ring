@@ -55,7 +55,6 @@
     trivial_casts,
     unused_import_braces,
     unused_results,
-    warnings
 )]
 #![cfg_attr(
     any(

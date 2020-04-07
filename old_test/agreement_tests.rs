@@ -28,7 +28,6 @@
     unused_qualifications,
     unused_results,
     variant_size_differences,
-    warnings
 )]
 
 use ring::{agreement, error, rand, test, test_file};

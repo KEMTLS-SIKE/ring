@@ -28,7 +28,6 @@
     unused_qualifications,
     unused_results,
     variant_size_differences,
-    warnings
 )]
 
 use ring::{error, hkdf, hmac, test, test_file};
