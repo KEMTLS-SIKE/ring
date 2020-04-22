@@ -1,7 +1,7 @@
 //! Wraps the post-quantum signature schemes in something slightly more usable
 //! for Ring.
 
-use oqs::sig as oqs;
+use ::oqs::sig as oqs;
 
 use crate::{error, pkcs8, sealed, signature};
 use untrusted;
