@@ -4,6 +4,7 @@
 use ::oqs::sig as oqs;
 
 use crate::{error, pkcs8, sealed, signature};
+use crate::io::der;
 use untrusted;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -106,11 +107,12 @@ impl PQSecretKey {
         let mut template = b"\x06\x0B\x2A\x06\x01\x04\x01\x82\x37\x59\x02".to_vec();
         template.push((alg.id as u16 >> 8) as u8);
         template.push(alg.id as u8);
-        // push null
-        template.push(0x05);
-        template.push(0);
         let (private_key, _) = pkcs8::unwrap_key_(&template, pkcs8::Version::V1OrV2, input)?;
 
+        let private_key = private_key.read_all(error::KeyRejected::invalid_encoding(), |input| {
+            der::expect_tag_and_get_value(input, der::Tag::OctetString)
+                .map_err(|error::Unspecified| error::KeyRejected::invalid_encoding())
+        })?;
 
         Ok(PQSecretKey {
             alg,
