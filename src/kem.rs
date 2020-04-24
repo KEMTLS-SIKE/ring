@@ -372,8 +372,8 @@ pub fn algorithm_to_id(alg: &agreement::Algorithm) -> u16 {
     }
 }
 
-/// Constructs the agreement private key from PKCS8.
 /*
+/// Constructs the agreement private key from PKCS8.
 fn private_key_from_pkcs8(
     alg: &agreement::Algorithm,
     id: u16,
