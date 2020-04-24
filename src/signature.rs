@@ -354,6 +354,7 @@ pub use crate::pqsign::{
     PICNIC2_L5_FS,
     Q_TESLA_PI,
     Q_TESLA_PIII,
+    XMSS,
 };
 
 #[cfg(feature = "use_heap")]

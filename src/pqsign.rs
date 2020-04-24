@@ -5,6 +5,7 @@ use ::oqs::sig as oqs;
 
 use crate::{error, pkcs8, sealed, signature};
 use crate::io::der;
+use xmss_rs as xmss;
 use untrusted;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -72,6 +73,7 @@ pub enum AlgorithmID {
     PICNIC2_L5_FS = 0xFE3C,
     Q_TESLA_PI = 0xFE3D,
     Q_TESLA_PIII = 0xFE3E,
+    XMSS = 0xFE3F,
 }
 
 #[derive(Clone)]
@@ -234,6 +236,36 @@ macro_rules! pqsig_scheme {
         };
     };
 }
+
+pub static XMSS: PQSignatureScheme = PQSignatureScheme {
+    id: AlgorithmID::XMSS,
+    keypair: || {
+        let (pk, sk) = xmss::keypair();
+        let pk = (XMSS.pk_from_slice)(&pk);
+        let sk = (XMSS.sk_from_slice)(&sk);
+        PQKeyPair { pk, sk }
+    },
+    pk_from_slice: |pk: &[u8]| PQPublicKey {
+        alg: &XMSS,
+        key: pk.to_vec(),
+    },
+    sk_from_slice: |sk: &[u8]| PQSecretKey {
+        alg: &XMSS,
+        key: sk.to_vec(),
+    },
+    sign: |_message: &[u8], _sk: &PQSecretKey| {
+        panic!("Not supported for XMSS due to necessary mut sk");
+    },
+    verify: |message: &[u8], sig: &PQSignature, pk: &PQPublicKey| {
+        debug_assert_eq!(pk.alg.id, AlgorithmID::XMSS);
+        debug_assert_eq!(sig.id, AlgorithmID::XMSS);
+        if xmss_rs::verify(message, &sig.signature, &pk.key) {
+            Ok(())
+        } else {
+            Err(Box::new(error::Unspecified))
+        }
+    }
+};
 
 
 pqsig_scheme!(DILITHIUM2, Dilithium2);
