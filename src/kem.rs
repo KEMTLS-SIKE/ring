@@ -1,4 +1,4 @@
-use crate::{agreement, error, pkcs8, rand};
+use crate::{agreement, error, rand};
 use untrusted;
 
 pub use pqcrypto::traits::kem::PublicKey;
