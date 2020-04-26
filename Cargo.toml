@@ -303,7 +303,7 @@ libc = { version = "0.2.48", default_features = false }
 csidh-rust = { path = "../csidh-rust" }
 pqcrypto = { path = "../pqcrypto/pqcrypto" }
 oqs = { path = "../oqs-rs/oqs" }
-xmss-rs = { path = "../xmss-rs" }
+xmss-rs = { path = "../mk-cert/xmss-rs" }
 
 [target.'cfg(not(target_os = "ios"))'.dependencies]
 spin = { version = "0.5.0" }
