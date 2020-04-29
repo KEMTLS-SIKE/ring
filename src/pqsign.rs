@@ -74,6 +74,7 @@ pub enum AlgorithmID {
     Q_TESLA_PI = 0xFE3D,
     Q_TESLA_PIII = 0xFE3E,
     XMSS = 0xFE3F,
+    GEMSS128 = 0xFE40,
 }
 
 #[derive(Clone)]
@@ -331,6 +332,7 @@ pqsig_scheme!(PICNIC2_L3_FS, Picnic2L3Fs);
 pqsig_scheme!(PICNIC2_L5_FS, Picnic2L5Fs);
 pqsig_scheme!(Q_TESLA_PI, QTeslaPI);
 pqsig_scheme!(Q_TESLA_PIII, QTeslaPIII);
+pqsig_scheme!(GEMSS128, Gemss128);
 
 #[cfg(test)]
 mod tests {

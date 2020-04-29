@@ -355,6 +355,7 @@ pub use crate::pqsign::{
     Q_TESLA_PI,
     Q_TESLA_PIII,
     XMSS,
+    GEMSS128,
 };
 
 #[cfg(feature = "use_heap")]
