@@ -84,6 +84,12 @@ pub fn read_tag_and_get_value<'a>(
             }
             combined
         },
+        0x83 => {
+            let second_byte = usize::from(input.read_byte()?);
+            let third_byte = usize::from(input.read_byte()?);
+            let fourth_byte = usize::from(input.read_byte()?);
+            (second_byte << 16) | (third_byte << 8) | fourth_byte
+        },
         _ => {
             return Err(error::Unspecified); // We don't support longer lengths.
         },
