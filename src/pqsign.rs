@@ -343,7 +343,7 @@ mod tests {
 
     #[test]
     fn test_signatures_scheme_sphincs_shake_256_128f_simple() {
-        let scheme = &SPHINCS_SHAKE_256_128F_SIMPLE;
+        let scheme = &SPHINCS_SHAKE256128F_SIMPLE;
 
         let mut message = [0u8; 64];
         let keypair = (scheme.keypair)();
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_pqsecretkey() {
-        let scheme = &SPHINCS_SHAKE_256_128F_SIMPLE;
+        let scheme = &SPHINCS_SHAKE256128F_SIMPLE;
 
         let message = Input::from(&[0u8; 64]);
         let message2 = Input::from(&[1u8; 64]);
