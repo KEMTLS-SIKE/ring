@@ -71,7 +71,7 @@
 // `#[derive(...)]` uses `trivial_numeric_casts` and `unused_qualifications`
 // internally.
 #![deny(missing_docs, unused_qualifications, variant_size_differences)]
-#![forbid(
+#![deny(
     anonymous_parameters,
     trivial_casts,
     trivial_numeric_casts,
