@@ -26,7 +26,6 @@
     unused_import_braces,
     unused_results,
     variant_size_differences,
-    warnings
 )]
 
 use ring::{digest, error, hkdf, test, test_file};

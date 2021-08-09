@@ -26,8 +26,7 @@
     unused_import_braces,
     unused_qualifications,
     unused_results,
-    variant_size_differences,
-    warnings
+    variant_size_differences
 )]
 
 #[cfg(feature = "alloc")]

@@ -27,7 +27,6 @@
     unused_qualifications,
     unused_results,
     variant_size_differences,
-    warnings
 )]
 
 extern crate alloc;

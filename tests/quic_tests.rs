@@ -27,7 +27,6 @@
     unused_qualifications,
     unused_results,
     variant_size_differences,
-    warnings
 )]
 
 use ring::{aead::quic, test, test_file};
